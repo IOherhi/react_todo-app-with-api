@@ -123,13 +123,10 @@ export const App: React.FC = () => {
   // #region UpdatePost
 
   /* eslint-disable @typescript-eslint/indent */
-  const [showLoaderCurrentPatch, setShowLoaderCurrentPatch] = useState<
-    number | null
-  >(null);
+  const [showLoaderCurrentPatch, setShowLoaderCurrentPatch] = useState<number[]>([]);
 
   const uppdatePost = (title: string, id: number) => {
     if (title.trim().length === 0) {
-      showError('Title should not be empty');
 
       deleteTodos(id)
         .then(() => {
@@ -143,7 +140,8 @@ export const App: React.FC = () => {
       return;
     }
 
-    setShowLoaderCurrentPatch(id);
+    setShowLoaderCurrentPatch(p => [...p, id]);
+
 
     patchTodos(id, { title })
       .then((response: Todo) => {
@@ -154,7 +152,11 @@ export const App: React.FC = () => {
       .catch(() => {
         showError('Unable to update a todo');
       })
-      .finally(() => setShowLoaderCurrentPatch(null));
+      .finally(() => {
+        setTimeout(() => {
+        setShowLoaderCurrentPatch(p => p.filter(currentId => currentId !== id));
+      }, 100);
+      });
   };
   // #endregion
 
@@ -213,28 +215,33 @@ export const App: React.FC = () => {
   // #endregion
 
   // #region changheCompleteValue
-  const [count, setCount] = useState<number>(0);
-
   const changheCompletedValue = () => {
-    let changeCompleted: Todo[] = [];
-    const newTodosArray: Promise<Todo>[] = [];
+    const shouldCompleteAll = todos.some(todo => !todo.completed); // Якщо є хоча б один незавершений
 
-    if (count % 2 === 0) {
-      changeCompleted = todos.map(todo => ({ ...todo, completed: false }));
-    } else {
-      changeCompleted = todos.map(todo => ({ ...todo, completed: true }));
-    }
+    const todosToUpdate = todos.filter(todo =>
+      shouldCompleteAll ? !todo.completed : todo.completed,
+    );
 
-    setCount(prev => 1 - prev);
 
-    changeCompleted.forEach(todo => {
-      newTodosArray.push(patchTodos(todo.id, todo).then(res => res));
-    });
+    todosToUpdate.forEach(todo => setShowLoaderCurrentPatch(prev => [...prev, todo.id]));
 
-    Promise.all(newTodosArray)
-      .then(response => setTodos(response))
-      .catch(() => {
-        showError('Unable to update all todos');
+    const patchRequests = todosToUpdate.map(todo =>
+      patchTodos(todo.id, { ...todo, completed: shouldCompleteAll }),
+    );
+
+    Promise.all(patchRequests)
+    .then(() => {
+      setTodos(prev =>
+        prev.map(todo =>
+        todosToUpdate.find(t => t.id === todo.id)
+          ? { ...todo, completed: shouldCompleteAll }
+          : todo
+      )
+    );
+  })
+      .catch(() => showError('Failed to update all tasks'))
+      .finally(() => {
+        todosToUpdate.forEach(() => setShowLoaderCurrentPatch([]));
       });
   };
 

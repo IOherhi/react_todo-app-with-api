@@ -12,7 +12,7 @@ export interface Props {
   LoderId: number;
   visibleTodos: Todo[];
   NewTodo: TypeNewTodo | null;
-  showLoaderCurrentPatch: number | null;
+  showLoaderCurrentPatch: number[];
   toggleAll: (n: number, v: boolean) => void;
   showLoader: (n: number) => void;
   deletePost: (n: number) => void;
@@ -75,7 +75,7 @@ export const TodoList: React.FC<Props> = ({
                 <input
                   autoFocus
                   type="text"
-                  data-cy="TodoTitle"
+                  data-cy="TodoTitleField"
                   className="todo__title"
                   value={editedTitle} // Якщо залишити Value  трибут  не контрольованим то React  не бачить подію блур.
                   onKeyUp={e => {
@@ -116,7 +116,7 @@ export const TodoList: React.FC<Props> = ({
                   <div
                     data-cy="TodoLoader"
                     className={classNames('modal overlay', {
-                      'is-active': showLoaderCurrentPatch === todo.id,
+                      'is-active': showLoaderCurrentPatch.includes(todo.id),
                     })}
                   >
                     <div className="modal-background has-background-white-ter" />
@@ -125,17 +125,19 @@ export const TodoList: React.FC<Props> = ({
                 </>
               )}
 
-              <button
-                type="button"
-                className="todo__remove"
-                onClick={() => {
-                  showLoader(todo.id);
-                  deletePost(todo.id);
-                }}
-                data-cy="TodoDelete"
-              >
-                ×
-              </button>
+              {isEditing !== todo.id && (
+                <button
+                  type="button"
+                  className="todo__remove"
+                  onClick={() => {
+                    showLoader(todo.id);
+                    deletePost(todo.id);
+                  }}
+                  data-cy="TodoDelete"
+                >
+                  ×
+                </button>
+              )}
 
               <div
                 data-cy="TodoLoader"
