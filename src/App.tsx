@@ -123,8 +123,9 @@ export const App: React.FC = () => {
   // #region UpdatePost
 
   /* eslint-disable @typescript-eslint/indent */
-  const [showLoaderCurrentPatch, setShowLoaderCurrentPatch] = useState<number | null>(null);
-
+  const [showLoaderCurrentPatch, setShowLoaderCurrentPatch] = useState<
+    number | null
+  >(null);
 
   const uppdatePost = (title: string, id: number) => {
     if (title.trim().length === 0) {
@@ -215,19 +216,19 @@ export const App: React.FC = () => {
   const [count, setCount] = useState<number>(0);
 
   const changheCompletedValue = () => {
-    let changeCompleted: Todo[];
-    const newTodosArray: Todo[];
+    let changeCompleted: Todo[] = [];
+    const newTodosArray: Promise<Todo>[] = [];
 
-    if (!count) {
+    if (count % 2 === 0) {
       changeCompleted = todos.map(todo => ({ ...todo, completed: false }));
-      setCount(prev => 1 - prev);
-    } else if (count) {
+    } else {
       changeCompleted = todos.map(todo => ({ ...todo, completed: true }));
-      setCount(prev => 1 - prev);
     }
 
-    newTodosArray = changeCompleted.map(todo => {
-      return patchTodos(todo.id, todo).then(res => res);
+    setCount(prev => 1 - prev);
+
+    changeCompleted.forEach(todo => {
+      newTodosArray.push(patchTodos(todo.id, todo).then(res => res));
     });
 
     Promise.all(newTodosArray)
