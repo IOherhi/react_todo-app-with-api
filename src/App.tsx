@@ -123,41 +123,31 @@ export const App: React.FC = () => {
   // #region UpdatePost
 
   /* eslint-disable @typescript-eslint/indent */
-  const [showLoaderCurrentPatch, setShowLoaderCurrentPatch] = useState<number[]>([]);
+  const [showLoaderCurrentPatch, setShowLoaderCurrentPatch] = useState<
+    number[]
+  >([]);
 
-  const uppdatePost = (title: string, id: number) => {
+  const uppdatePost = async (title: string, id: number) => {
     if (title.trim().length === 0) {
-
-      deleteTodos(id)
-        .then(() => {
-          setTodos(todos.filter(todo => todo.id !== id));
-        })
-        .catch(() => {
-          showError('Unable to delete a todo');
-        })
-        .finally(() => focusForInput());
-
-      return;
+      throw new Error('Title should not be empty');
     }
 
     setShowLoaderCurrentPatch(p => [...p, id]);
 
+    try {
+      const response = await patchTodos(id, { title });
 
-    patchTodos(id, { title })
-      .then((response: Todo) => {
-        setTodos(prev =>
-          prev.map((todo: Todo) => (todo.id === response.id ? response : todo)),
-        );
-      })
-      .catch(() => {
-        showError('Unable to update a todo');
-      })
-      .finally(() => {
-        setTimeout(() => {
-        setShowLoaderCurrentPatch(p => p.filter(currentId => currentId !== id));
-      }, 100);
-      });
+      setTodos(prev =>
+        prev.map((todo: Todo) => (todo.id === response.id ? response : todo)),
+      );
+    } catch {
+      showError('Unable to update a todo');
+      throw new Error('Update failed');
+    } finally {
+      setShowLoaderCurrentPatch(p => p.filter(currentId => currentId !== id));
+    }
   };
+
   // #endregion
 
   const deletePost = (id: number) => {
@@ -222,23 +212,24 @@ export const App: React.FC = () => {
       shouldCompleteAll ? !todo.completed : todo.completed,
     );
 
-
-    todosToUpdate.forEach(todo => setShowLoaderCurrentPatch(prev => [...prev, todo.id]));
+    todosToUpdate.forEach(todo =>
+      setShowLoaderCurrentPatch(prev => [...prev, todo.id]),
+    );
 
     const patchRequests = todosToUpdate.map(todo =>
       patchTodos(todo.id, { ...todo, completed: shouldCompleteAll }),
     );
 
     Promise.all(patchRequests)
-    .then(() => {
-      setTodos(prev =>
-        prev.map(todo =>
-        todosToUpdate.find(t => t.id === todo.id)
-          ? { ...todo, completed: shouldCompleteAll }
-          : todo
-      )
-    );
-  })
+      .then(() => {
+        setTodos(prev =>
+          prev.map(todo =>
+            todosToUpdate.find(t => t.id === todo.id)
+              ? { ...todo, completed: shouldCompleteAll }
+              : todo,
+          ),
+        );
+      })
       .catch(() => showError('Failed to update all tasks'))
       .finally(() => {
         todosToUpdate.forEach(() => setShowLoaderCurrentPatch([]));

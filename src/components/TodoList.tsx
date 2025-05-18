@@ -5,7 +5,7 @@
 import classNames from 'classnames';
 import { Todo } from '../types/Todo';
 import { TypeNewTodo } from '../App';
-import React, { useRef, useState } from 'react';
+import { useState } from 'react';
 
 export interface Props {
   todos: Todo[];
@@ -32,18 +32,6 @@ export const TodoList: React.FC<Props> = ({
 }) => {
   const [isEditing, setIsEditing] = useState<number>(-1);
   const [editedTitle, setEditedTitle] = useState<string>('');
-
-  const setTimeout01 = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const doTitleEdited = () => {
-    if (setTimeout01.current) {
-      clearTimeout(setTimeout01.current);
-    }
-
-    setTimeout01.current = setTimeout(() => {
-      setIsEditing(-1);
-    }, 0);
-  };
 
   return (
     <section className="todoapp__main" data-cy="TodoList">
@@ -90,14 +78,26 @@ export const TodoList: React.FC<Props> = ({
                   onChange={e => {
                     setEditedTitle(e.target.value);
                   }}
-                  onBlur={e => {
+                  onBlur={async e => {
                     const newValue = e.currentTarget.value.trim();
 
-                    if (newValue !== todo.title) {
-                      uppdatePost(newValue, todo.id);
+                    if (newValue === '') {
+                      showLoader(todo.id);
+                      deletePost(todo.id);
+
+                      return;
                     }
 
-                    doTitleEdited();
+                    if (newValue !== todo.title) {
+                      try {
+                        await uppdatePost(newValue, todo.id);
+                        setIsEditing(-1); // ← тільки якщо успішно
+                      } catch (error) {
+                        throw new Error('Update failed');
+                      }
+                    } else {
+                      setIsEditing(-1); // нічого не змінилось — закриваємо
+                    }
                   }}
                 />
               ) : (
@@ -142,7 +142,9 @@ export const TodoList: React.FC<Props> = ({
               <div
                 data-cy="TodoLoader"
                 className={classNames('modal overlay', {
-                  'is-active': LoderId === todo.id,
+                  'is-active':
+                    LoderId === todo.id ||
+                    showLoaderCurrentPatch.includes(todo.id),
                 })}
               >
                 <div className="modal-background has-background-white-ter" />
